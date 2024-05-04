@@ -489,16 +489,16 @@ class PurePursuit_Pilot(object):
             # calculate heading based on angle between last and current position
             if (pos_x - self.last_pos_x) > 0 and (pos_y - self.last_pos_y) > 0:
                 # NE, 0 -> 90
-                heading = abs(math.atan((pos_x - self.last_pos_x) / (pos_y - self.last_pos_y)))
+                heading = abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
             elif (pos_x - self.last_pos_x) < 0  and (pos_y - self.last_pos_y) > 0:
                 # NW, 90 - 180
-                heading = 180*(math.pi/180) - abs(math.atan((pos_x - self.last_pos_x) / (pos_y - self.last_pos_y)))
+                heading = 180*(math.pi/180) - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
             elif (pos_x - self.last_pos_x) < 0 and (pos_y - self.last_pos_y) < 0:
                 # SW, 180 -> 270
-                heading = abs(math.atan((pos_x - self.last_pos_x) / (pos_y - self.last_pos_y))) + 180*(math.pi/180)
+                heading = abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x))) + 180*(math.pi/180)
             else:
                 # SE, 270 -> 360
-                heading = 360*(math.pi/180) - abs(math.atan((pos_x - self.last_pos_x) / (pos_y - self.last_pos_y)))
+                heading = 360*(math.pi/180) - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
             # lock to 0 -> 360 frame
             heading %= 2*math.pi
             self.last_pos_x = pos_x
@@ -578,18 +578,18 @@ class PurePursuit_Pilot(object):
         # alpha is angle between current position and goal point; steer is how much heading needs to change (generally difference between heading and alpha)
         alpha = math.acos((goal_point[0] - pos_x) / (math.sqrt((goal_point[0] - pos_x)**2 + (goal_point[1] - pos_y)**2) + 1e-5))
         # calculate alpha based on angle between last and current position
-        if (goal_point[0] - pos_x) > 0 and (goal_point[1] - pos_y) > 0:
+        if (goal_point[1] - pos_y) > 0 and (goal_point[0] - pos_x) > 0:
             # NE, 0 -> 90
             alpha = abs(math.atan((goal_point[0] - pos_x) / (goal_point[1] - pos_y)))
         elif (goal_point[0] - pos_x) < 0  and (goal_point[1] - pos_y) > 0:
             # NW, 90 - 180
-            alpha = 180*(math.pi/180) - abs(math.atan((goal_point[0] - pos_x) / (goal_point[1] - pos_y)))
+            alpha = 180*(math.pi/180) - abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
         elif (goal_point[0] - pos_x) < 0 and (goal_point[1] - pos_y) < 0:
             # SW, 180 -> 270
-            alpha = abs(math.atan((goal_point[0] - pos_x) / (goal_point[1] - pos_y))) + 180*(math.pi/180)
+            alpha = abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x))) + 180*(math.pi/180)
         else:
             # SE, 270 -> 360
-            alpha = 360*(math.pi/180) - abs(math.atan((goal_point[0] - pos_x) / (goal_point[1] - pos_y)))
+            alpha = 360*(math.pi/180) - abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
         # lock to 0 -> 360 frame
         alpha %= 2*math.pi
 
