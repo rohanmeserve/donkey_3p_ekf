@@ -580,7 +580,7 @@ class PurePursuit_Pilot(object):
         # calculate alpha based on angle between last and current position
         if (goal_point[1] - pos_y) > 0 and (goal_point[0] - pos_x) > 0:
             # NE, 0 -> 90
-            alpha = abs(math.atan((goal_point[0] - pos_x) / (goal_point[1] - pos_y)))
+            alpha = abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
         elif (goal_point[0] - pos_x) < 0  and (goal_point[1] - pos_y) > 0:
             # NW, 90 - 180
             alpha = 180*(math.pi/180) - abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
@@ -595,7 +595,7 @@ class PurePursuit_Pilot(object):
 
         # desired - current = change needed
         norm_turn = alpha - heading
-        adj_turn = (360 - abs(norm_turn)) * -sign(norm_turn)
+        adj_turn = (360*(math.pi/180) - abs(norm_turn)) * -sign(norm_turn)
         # compare total turn for normal and adjusted turns; take the shortest route
         #print(f'at: {heading}, turn to {alpha}, norm {norm_turn}, adjusted {adj_turn}')
         if abs(norm_turn) < abs(adj_turn):
