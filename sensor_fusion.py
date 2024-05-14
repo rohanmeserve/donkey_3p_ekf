@@ -7,6 +7,7 @@
 ### IMPORTS $$$
 
 import numpy as np
+import math
 import time
 
 class kalmanFilter():
@@ -16,7 +17,7 @@ class kalmanFilter():
     '''
     def __init__(self, initPos, initVel, posStdDev, accStdDev, currTime):
         # set these values from the arguments received
-        # current state
+        # current state ; assumes car is at origin (0,0) and at rest
         self.X = np.array([[np.float64(initPos)], [np.float64(initVel)]])
         # Identity matrix
         self.I = np.identity(2)
@@ -34,6 +35,10 @@ class kalmanFilter():
         # self.B = defined in predict
         # self.u = defined in predict
         # self.z = defined in update
+
+        # for heading calculation
+        self.last_pred_x = 0
+        self.last_pred_y = 0
 
     # main functions
     def predict(self, accThisAxis, timeNow):
@@ -165,7 +170,25 @@ class GPS_IMU_EKF:
         self.file.write(f'({pred_x}, {pred_y}), ({pos_x}, {pos_y}), {timestamp}\n')
         self.last_time = curr_time
 
-        return pred_x, pred_y
+        # recalculate heading given last outputted position and new
+        if (pred_x - self.last_pred_x) > 0 and (pred_y - self.last_pred_y) > 0:
+            # NE, 0 -> 90
+            heading = abs(math.atan((pred_y - self.last_pred_y) / (pred_x - self.last_pred_x)))
+        elif (pred_x - self.last_pred_x) < 0  and (pred_y - self.last_pred_y) > 0:
+            # NW, 90 - 180
+            heading = 180*(math.pi/180) - abs(math.atan((pred_y - self.last_pred_y) / (pred_x - self.last_pred_x)))
+        elif (pred_x - self.last_pred_x) < 0 and (pred_y - self.last_pred_y) < 0:
+            # SW, 180 -> 270
+            heading = abs(math.atan((pred_y - self.last_pred_y) / (pred_x - self.last_pred_x))) + 180*(math.pi/180)
+        else:
+            # SE, 270 -> 360
+            heading = 360*(math.pi/180) - abs(math.atan((pred_y - self.last_pred_y) / (pred_x - self.last_pred_x)))
+        # lock to 0 -> 360 frame
+        heading %= 2*math.pi
+        self.last_pred_x = pred_x
+        self.last_pred_y = pred_y
+
+        return pred_x, pred_y, heading
       
 
 if __name__ == "__main__":

@@ -158,6 +158,7 @@ class IMU:
 if __name__ == "__main__":
     iter = 0
     import sys
+    import numpy as np
     sensor_type = SENSOR_OAKDPRO
     dlp_setting = DLP_SETTING_DISABLED
     if len(sys.argv) > 1:
@@ -165,20 +166,22 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         dlp_setting = int(sys.argv[2])
 
-    p   = IMU(sensor=sensor_type)
-    x_tot = 0
-    y_tot = 0
-    z_tot = 0
-    while True:
+    p = IMU(sensor=sensor_type)
+    x_vals = []
+    y_vals = []
+    z_vals = []
+    while iter<1000:
         data = p.run()
-        x_tot += float(data[0])
-        y_tot += float(data[1])
-        z_tot += float(data[2])
+        x_vals += [float(data[0])]
+        y_vals += [float(data[1])]
+        z_vals += [float(data[2])]
         print(data)
         time.sleep(0.01)
-        #iter += 1
-    # print bias per axis
-    print(f'x_bias = {x_tot/10000}')
-    print(f'y_bias = {y_tot/10000}')
-    print(f'z_bias = {z_tot/10000}')
-    
+        iter += 1
+    # print mean and standard deviation per axis (for bias and error calculations)
+    print(f'x_bias = {np.mean(x_vals)}')
+    print(f'y_bias = {np.mean(y_vals)}')
+    print(f'z_bias = {np.mean(z_vals)}')
+    print(f'x_std = {np.std(x_vals)}')
+    print(f'y_std = {np.std(x_vals)}')
+    print(f'z_std = {np.std(y_vals)}')

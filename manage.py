@@ -279,10 +279,10 @@ def drive(cfg, use_joystick=False, camera_type='single'):
     ### DSC190 IMU ESTIMATOR AND EKF ###
     from PositionEstimator import PositionEstimator
     position_est = PositionEstimator()
-    V.add(position_est, inputs=['imu/acl_x', 'imu/acl_y', 'imu/gyr_x', 'pos/x', 'pos/y'], outputs=['est_pos/x', 'est_pos/y', 'heading', 'abs/acl/x', 'abs/acl/y'], threaded=False)
+    V.add(position_est, inputs=['imu/acl_x', 'imu/acl_y', 'imu/gyr_x', 'pos/x', 'pos/y'], outputs=['est_pos/x', 'est_pos/y', 'heading', 'abs/acl_x', 'abs/acl_y'], threaded=False)
     from sensor_fusion import GPS_IMU_EKF
     ekf = GPS_IMU_EKF()
-    V.add(ekf, inputs=['pos/x', 'pos/y', 'abs/acl/x', 'abs/acl/y'], outputs=['est_pos/x', 'est_pos/y', 'heading'])
+    V.add(ekf, inputs=['pos/x', 'pos/y', 'abs/acl_x', 'abs/acl_y'], outputs=['est_pos/x', 'est_pos/y', 'heading'])
     ### END DSC190 ###
 
     # This will use path and current position to output cross track error
