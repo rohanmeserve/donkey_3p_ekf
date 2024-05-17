@@ -124,9 +124,6 @@ class GPS_IMU_EKF:
         self.last_pos_x = 0
         self.last_pos_y = 0
 
-        self.last_pred_x = 0
-        self.last_pred_y = 0
-
         # create file for analysis purposes
         self.file = open('ekf.csv', 'w')
         # write column headers
