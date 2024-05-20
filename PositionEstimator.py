@@ -27,13 +27,6 @@ class PositionEstimator:
         self.vy = 0.
         self.yaw = 0.
 
-        ### gps-vel raw proj ###
-        self.px = 0
-        self.py = 0
-        self.pvx = 0
-        self.pvy = 0
-        ### end ###
-
         # last gps values received
         self.last_pos_x = 0.
         self.last_pos_y = 0.
@@ -79,9 +72,8 @@ class PositionEstimator:
         self.x += self.vx * dt
         self.y += self.vy * dt
 
-        ## update gps-vel proj position
-        self.px += self.pvx * dt
-        self.py += self.pvy * dt
+        # calculate total velocity
+        velocity_total = math.sqrt(self.vx**2 + self.vy**2)
 
         # update time for next run
         self.last_time = curr_time
@@ -100,11 +92,6 @@ class PositionEstimator:
             # reset velocity based on gps delta
             self.vx = (pos_x - self.last_pos_x) / gps_dt
             self.vy = (pos_y - self.last_pos_y) / gps_dt
-
-            ### gps-vel proj velocity
-            self.pvx = self.vx
-            self.pvy = self.vy
-            ###
 
             # reset yaw
             if (pos_x - self.last_pos_x) > 0 and (pos_y - self.last_pos_y) > 0:
@@ -127,13 +114,10 @@ class PositionEstimator:
         self.last_pos_x = pos_x
         self.last_pos_y = pos_y
 
-        # write predicted pos and last known true pos to file
-        #self.file.write(f'({self.x},{self.y}), ({pos_x}, {pos_y}), {curr_time - self.start_time}\n')
+        # (imu-adjusted x,y), (gps-raw x,y), timestamp, yaw
+        self.file.write(f'({self.x},{self.y}), ({pos_x}, {pos_y}), {curr_time - self.start_time}, {self.yaw}\n')
 
-        # (imu-adjusted x,y), (gps-vel projected x,y), (gps-raw x,y), timestamp, yaw
-        self.file.write(f'({self.x},{self.y}), ({self.px}, {self.py}), ({pos_x}, {pos_y}), {curr_time - self.start_time}, {self.yaw}\n')
-
-        return self.x, self.y, self.yaw, ax, ay
+        return self.x, self.y, self.yaw, ax, ay, velocity_total
 
 
 if __name__ == "__main__":
