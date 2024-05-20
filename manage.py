@@ -279,7 +279,7 @@ def drive(cfg, use_joystick=False, camera_type='single'):
     ### DSC190 IMU ESTIMATOR AND EKF ###
     from PositionEstimator import PositionEstimator
     position_est = PositionEstimator()
-    V.add(position_est, inputs=['imu/acl_x', 'imu/acl_y', 'imu/gyr_x', 'pos/x', 'pos/y'], outputs=['est_pos/x', 'est_pos/y', 'heading', 'abs/acl_x', 'abs/acl_y'], threaded=False)
+    V.add(position_est, inputs=['imu/acl_x', 'imu/acl_y', 'imu/gyr_x', 'pos/x', 'pos/y'], outputs=['est_pos/x', 'est_pos/y', 'heading', 'abs/acl_x', 'abs/acl_y', 'total_velocity'], threaded=False)
     from sensor_fusion import GPS_IMU_EKF
     ekf = GPS_IMU_EKF()
     V.add(ekf, inputs=['pos/x', 'pos/y', 'abs/acl_x', 'abs/acl_y'], outputs=['est_pos/x', 'est_pos/y', 'heading'])
@@ -294,8 +294,8 @@ def drive(cfg, use_joystick=False, camera_type='single'):
     #pilot = PID_Pilot(pid, cfg.PID_THROTTLE, cfg.USE_CONSTANT_THROTTLE, min_throttle=cfg.PID_THROTTLE)
     #V.add(pilot, inputs=['cte/error', 'throttles', 'cte/closest_pt'], outputs=['pilot/steering', 'pilot/throttle'], run_condition="run_pilot")
     from path import PurePursuit_Pilot
-    pilot = PurePursuit_Pilot(lookahead_distance=1)
-    V.add(pilot, inputs=['path', 'pos/x', 'pos/y', 'heading', 'throttles', 'cte/closest_pt'], outputs=['pilot/steering', 'pilot/throttle'], run_condition='run_pilot')
+    pilot = PurePursuit_Pilot(lookahead_distance=1, max_angle=25, axle_dist=1, Kd=1)
+    V.add(pilot, inputs=['path', 'pos/x', 'pos/y', 'heading', 'throttles', 'cte/closest_pt', 'total_velocity'], outputs=['pilot/steering', 'pilot/throttle'], run_condition='run_pilot')
 
     def dec_pid_d():
         pid.Kd -= cfg.PID_D_DELTA
