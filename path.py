@@ -465,6 +465,9 @@ class PurePursuit_Pilot(object):
             self,
             throttle: float,
             lookahead_distance: float,
+            max_angle: float,
+            axle_dist: float,
+            Kd: float,
             use_constant_throttle: bool = False,
             min_throttle: float = None):
         self.throttle = throttle
@@ -475,15 +478,18 @@ class PurePursuit_Pilot(object):
         self.ld = lookahead_distance
         self.axel_dist = 1
 
-        self.min_angle = -25*(math.pi/180)
-        self.max_angle = 25*(math.pi/180)
+        self.min_angle = -max_angle*(math.pi/180)
+        self.max_angle = max_angle*(math.pi/180)
+
+        self.L = axle_dist
+        self.Kd = Kd
 
         self.last_pos_x = 0
         self.last_pos_y = 0
 
         self.file = open('navigator.csv', 'w')
 
-    def run(self, path: list, pos_x, pos_y, heading, throttles: list, closest_pt_idx: int) -> tuple:
+    def run(self, path: list, pos_x, pos_y, heading, throttles: list, closest_pt_idx: int, total_velocity:float) -> tuple:
         # If PositionEstimator is not used for heading, instead calculate based on last gps position
         if heading is None:
             # calculate heading based on angle between last and current position
@@ -507,6 +513,12 @@ class PurePursuit_Pilot(object):
         ### CALCULATE STEERING
         # find dist of closest point; if within ld, find intersections; else use closest point as goal point
         #
+
+        # adjust lookahead distance based on velocity
+        #lookahead = self.Kd * total_velocity
+
+        # or use static lookahaed
+        lookahead = self.ld
 
         goal_dist = dist(pos_x, pos_y, path[closest_pt_idx][0], path[closest_pt_idx][1])
         #####print(f'goal dist: {goal_dist}')
@@ -605,7 +617,7 @@ class PurePursuit_Pilot(object):
 
         # convert to curvature
         # atan(2*L*sin(delta)/ld)
-        #steer = math.atan(2*2*math.sin(steer)/self.ld)
+        #steer = math.atan(2*self.L*math.sin(steer)/self.ld)
 
         # convert steering value to be on scale from -1 to 1
         steer /= self.max_angle
