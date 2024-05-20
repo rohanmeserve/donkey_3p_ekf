@@ -603,6 +603,10 @@ class PurePursuit_Pilot(object):
         else:
             steer = adj_turn
 
+        # convert to curvature
+        # atan(2*L*sin(delta)/ld)
+        #steer = math.atan(2*2*math.sin(steer)/self.ld)
+
         # convert steering value to be on scale from -1 to 1
         steer /= self.max_angle
         # if steering is outstide min/max steering angle, limit it
