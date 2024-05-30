@@ -293,8 +293,12 @@ def drive(cfg, use_joystick=False, camera_type='single'):
     #pid = PIDController(p=cfg.PID_P, i=cfg.PID_I, d=cfg.PID_D)
     #pilot = PID_Pilot(pid, cfg.PID_THROTTLE, cfg.USE_CONSTANT_THROTTLE, min_throttle=cfg.PID_THROTTLE)
     #V.add(pilot, inputs=['cte/error', 'throttles', 'cte/closest_pt'], outputs=['pilot/steering', 'pilot/throttle'], run_condition="run_pilot")
+    
+    #from path import PurePursuit_Pilot_Stable
+    #pilot = PurePursuit_Pilot_Stable(lookahead_distace=2, max_angle=25)
+    #V.add(pilot, inputs=['path', 'pos/x', 'pos/y', 'heading', 'throttles', 'cte/closest_pt'], outputs=['pilot/steering', 'pilot/throttle'], run_condition='run_pilot')
     from path import PurePursuit_Pilot
-    pilot = PurePursuit_Pilot(lookahead_distance=1, max_angle=25, axle_dist=1, Kd=1)
+    pilot = PurePursuit_Pilot(max_angle=25, axle_dist=1, Kd=1, max_throttle=.6)
     V.add(pilot, inputs=['path', 'pos/x', 'pos/y', 'heading', 'throttles', 'cte/closest_pt', 'total_velocity'], outputs=['pilot/steering', 'pilot/throttle'], run_condition='run_pilot')
 
     def dec_pid_d():
