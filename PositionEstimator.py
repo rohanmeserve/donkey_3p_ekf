@@ -40,7 +40,7 @@ class PositionEstimator:
         # create file for analysis purposes
         self.file = open('estimations.csv', 'w')
         # write column headers
-        self.file.write('(est_x, est_y), (act_x, act_y), timestamp\n')
+        self.file.write('(est_x, est_y), (act_x, act_y), timestamp, yaw\n')
 
 
     def run(self, acl_x: float, acl_y: float, gyr_x: float, pos_x: float, pos_y: float):
@@ -49,15 +49,24 @@ class PositionEstimator:
         curr_time = time.time()
         dt = curr_time - self.last_time
 
+        # if IMU inputs are None (no IMU), then set to 0
+        # this will essentially just project the position
+        # based on last known positions and time elapsed
+        if gyr_x is None:
+            gyr_x = 0
+        if acl_x is None:
+            acl_x = 0
+        if acly_y is None:
+            acl_y = 0
+
         # update orientation
-        # also convert from radians to degrees
         self.yaw += float(gyr_x) * dt
 
         # lock yaw to 0->360 frame
         if self.yaw < 0:
             # handle negative case; -1deg = 359deg
-            self.yaw += 360*(math.pi/180)
-        self.yaw %= 360*(math.pi/180)
+            self.yaw += 2*math.pi
+        self.yaw %= 2*math.pi
 
 
         # rotate accerlation vectors; apply trig then adjust signage according to heading
@@ -81,7 +90,6 @@ class PositionEstimator:
         # checks if the pos/x and pos/y from gps have recently been updated
         # if true, reset stored position and velocity to match actual values
         if pos_x != self.last_pos_x or pos_y != self.last_pos_y:
-            #print('resetting with gps instruciton')
             # calculate time difference since last gps update
             gps_dt = curr_time - self.last_gps_time
             # reset position based on gps values
@@ -99,13 +107,13 @@ class PositionEstimator:
                 self.yaw = abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
             elif (pos_x - self.last_pos_x) < 0  and (pos_y - self.last_pos_y) > 0:
                 # NW, 90 - 180
-                self.yaw = 180*(math.pi/180) - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
+                self.yaw = math.pi - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
             elif (pos_x - self.last_pos_x) < 0 and (pos_y - self.last_pos_y) < 0:
                 # SW, 180 -> 270
-                self.yaw = abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x))) + 180*(math.pi/180)
+                self.yaw = abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x))) + math.pi
             else:
                 # SE, 270 -> 360
-                self.yaw = 360*(math.pi/180) - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
+                self.yaw = (2*math.pi) - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
             # lock to 0 -> 360 frame
             self.yaw %= 2*math.pi
             self.last_gps_time = curr_time
@@ -117,6 +125,7 @@ class PositionEstimator:
         # (imu-adjusted x,y), (gps-raw x,y), timestamp, yaw
         self.file.write(f'({self.x},{self.y}), ({pos_x}, {pos_y}), {curr_time - self.start_time}, {self.yaw}\n')
 
+        # returns estimated x, estimated y, estimated orientation, absolute x accerlation, absolute y acceration, and total velocity
         return self.x, self.y, self.yaw, ax, ay, velocity_total
 
 
