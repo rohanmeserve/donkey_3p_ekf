@@ -630,9 +630,10 @@ class PurePursuit_Pilot(object):
     def __init__(
             self,
             throttle: float,
+            lookahead_distance: float,
+            Kd: float,
             max_angle: float,
             axle_dist: float,
-            Kd: float,
             max_speed: float,
             max_throttle: float,
             use_constant_throttle: bool = False,
@@ -642,13 +643,15 @@ class PurePursuit_Pilot(object):
         self.variable_speed_multiplier = 1.0
         self.min_throttle = min_throttle if min_throttle is not None else throttle
 
-        self.ld = 2
-        self.ld_base = 2
-
-        self.max_angle = max_angle*(math.pi/180)
-
-        self.L = axle_dist
+        # to use static lookahead, set Kd to 0
+        self.ld_base = lookahead_distance
         self.Kd = Kd
+
+        # values that need to be measure from car
+        self.max_angle = max_angle*(math.pi/180)
+        self.L = axle_dist
+
+        # value for controlling speed
         self.max_speed = max_speed
         self.max_throttle = max_throttle
         self.throttle_level = max_throttle
@@ -659,76 +662,52 @@ class PurePursuit_Pilot(object):
         self.file = open('navigator.csv', 'w')
 
     def run(self, path: list, pos_x, pos_y, heading, throttles: list, closest_pt_idx: int, total_velocity:float) -> tuple:
-        # If PositionEstimator is not used for heading, instead calculate based on last gps position
-        if heading is None:
-            # calculate heading based on angle between last and current position
-            if (pos_x - self.last_pos_x) > 0 and (pos_y - self.last_pos_y) > 0:
-                # NE, 0 -> 90
-                heading = abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
-            elif (pos_x - self.last_pos_x) < 0  and (pos_y - self.last_pos_y) > 0:
-                # NW, 90 - 180
-                heading = 180*(math.pi/180) - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
-            elif (pos_x - self.last_pos_x) < 0 and (pos_y - self.last_pos_y) < 0:
-                # SW, 180 -> 270
-                heading = abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x))) + 180*(math.pi/180)
-            else:
-                # SE, 270 -> 360
-                heading = 360*(math.pi/180) - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
-            # lock to 0 -> 360 frame
-            heading %= 2*math.pi
-            self.last_pos_x = pos_x
-            self.last_pos_y = pos_y
+
 
         ### CALCULATE STEERING
-        # find dist of closest point; if within ld, find intersections; else use closest point as goal point
-        #
+
 
         # adjust lookahead distance based on velocity
-        self.ld = self.ld_base + (self.Kd * total_velocity)
+        ld = self.ld_base + (self.Kd * total_velocity)
 
+        # find dist of closest point; if within ld, find intersections; else use closest point as goal point
         goal_dist = dist(pos_x, pos_y, path[closest_pt_idx][0], path[closest_pt_idx][1])
-        #####print(f'goal dist: {goal_dist}')
-        if goal_dist < self.ld:
+        if goal_dist < ld:
 
             # check next point along path; keep moving until furthest point within ld is found
             i = 0
             line_found = False
-            # TODO: optimize search for best path segment within lookahead dist
             while not line_found:
                 # calc distance for next point
                 i += 1
-                if dist(pos_x, pos_y, path[(closest_pt_idx + i) % len(path)][0], path[(closest_pt_idx + i) % len(path)][1]) > self.ld:
+                if dist(pos_x, pos_y, path[(closest_pt_idx + i) % len(path)][0], path[(closest_pt_idx + i) % len(path)][1]) > ld:
                     # if dist exceeds lookahead distance, go back one point
                     i -= 1
                     line_found = True
-                #####print(f'goal dist: {goal_dist}')
                 # loop terminates if dist exceeds ld; keep last valid index
             
             # set line segment where goal point solution exists
-            #####print(f'closest_idx = {closest_pt_idx}, i = {i}')
             a = path[(closest_pt_idx + i) % len(path)]
             b = path[(closest_pt_idx + i + 1) % len(path)]
-            #####print(f'using line ({a},{b})')
             # calculate intersection solution
             dx = (b[0] - pos_x) - (a[0] - pos_x)
             dy = (b[1] - pos_y) - (a[1] - pos_y)
             dr = math.sqrt(dx**2 + dy**2) + 1e-5
             D = (a[0] - pos_x)*(b[1] - pos_y) - (b[0] - pos_x)*(a[1] - pos_y)
-            discrim = (self.ld**2) * (dr**2) - (D**2)
+            discrim = (ld**2) * (dr**2) - (D**2)
+
             if discrim >= 0:
-                # solutions exist
-                #print(f'discrim: {discrim}')
                 # calculate the solutions
                 sol_x1 = (D * dy + sign(dy) * dx * math.sqrt(discrim)) / dr**2
                 sol_x2 = (D * dy - sign(dy) * dx * math.sqrt(discrim)) / dr**2
                 sol_y1 = (- D * dx + abs(dy) * math.sqrt(discrim)) / dr**2
                 sol_y2 = (- D * dx - abs(dy) * math.sqrt(discrim)) / dr**2
+
                 # adjust offsets
                 sol_x1 += pos_x
                 sol_x2 += pos_x
                 sol_y1 += pos_y
                 sol_y2 += pos_y
-                #####print(f'possible solutions: ({sol_x1}, {sol_y1}) and ({sol_x2}, {sol_y2})')
 
                 # find distance between each solution and next point; use one with smallest dist (furthest along point)
                 dist_1 = dist(sol_x1, sol_y1, path[(closest_pt_idx + i + 1) % len(path)][0], path[(closest_pt_idx + i + 1) % len(path)][1])
@@ -742,18 +721,14 @@ class PurePursuit_Pilot(object):
                 else:
                     goal_point = path[closest_pt_idx]
             else:
-                # no solution exists; default to closest
-                #####print(f'negative discriminant; default to closest point {path[closest_pt_idx]}')
+                # no solution exists; default to closest point on path
                 goal_point = path[closest_pt_idx]
 
         else:
             # closest point is not within ld circle; use closest as goal point
-            ###print(f'closest out of range; using {path[(closest_pt_idx + 1) % len(path)]} at dist {goal_dist}')
             goal_point = path[(closest_pt_idx + 1) % len(path)]
-        # plug goal point into formula for steering angle
 
-        # set steering angle
-        # alpha is angle between current position and goal point; steer is how much heading needs to change (generally difference between heading and alpha)
+        # find alpha, angle between current position and goal point
         alpha = math.acos((goal_point[0] - pos_x) / (math.sqrt((goal_point[0] - pos_x)**2 + (goal_point[1] - pos_y)**2) + 1e-5))
         # calculate alpha based on angle between last and current position
         if (goal_point[1] - pos_y) > 0 and (goal_point[0] - pos_x) > 0:
@@ -771,30 +746,29 @@ class PurePursuit_Pilot(object):
         # lock to 0 -> 360 frame
         alpha %= 2*math.pi
 
-        # desired - current = change needed
+        # calculate possible turns (clockwise or counterclockwise) to ensure shortest is taken
         norm_turn = alpha - heading
         adj_turn = (360*(math.pi/180) - abs(norm_turn)) * -sign(norm_turn)
-        # compare total turn for normal and adjusted turns; take the shortest route
-        #print(f'at: {heading}, turn to {alpha}, norm {norm_turn}, adjusted {adj_turn}')
         if abs(norm_turn) < abs(adj_turn):
             steer = norm_turn
         else:
             steer = adj_turn
 
-        # convert to curvature
-        # atan(2*L*sin(delta)/ld)
-        steer = math.atan(2*self.L*math.sin(steer)/self.ld)
+        # convert to proper steer based on curvature of route to goal point
+        steer = math.atan(2*self.L*math.sin(steer)/ld)
         steer_raw = steer
         # convert steering value to be on scale from -1 to 1
         steer /= self.max_angle
-        excess = 0
+
         # if steering is outstide min/max steering angle, limit it
+        excess = 0
         if steer > 1:
             excess = abs(steer_raw - self.max_angle)
             steer = 1
         elif steer < -1:
             excess = abs(steer_raw - self.max_angle)
             steer = -1
+
 
         ### END STEERING CALCULATION
         
@@ -806,6 +780,11 @@ class PurePursuit_Pilot(object):
         else:
             throttle = throttles[closest_pt_idx] * self.variable_speed_multiplier
 
+        
+        ### CODE FOR SPEEDING UP / SLOWING DOWN BASED ON HOW SHARP TURN IS ###
+        ### UNTESTED
+
+        # TODO: figure out how to handle rate of speed up and slow down, since currently will be affected by drive loop frequency (maybe multiply by the drive loop frequency?)
         # adjust throttle based on excess angle and max allowed
         if excess > 5*(math.pi/180):
             # if more than 5 degrees of excess, reduce throttle by excess/90deg
@@ -824,8 +803,9 @@ class PurePursuit_Pilot(object):
 
         # ensure car does not start reversing
         if throttle < 0:
-            print('NEGATIVE THROTTLE RECEIVED WHILE IN AUTO; MORE THAN 90DEG OF EXCESS')
             throttle = 0
+
+        # write to file for later analysis
         # x, y, intersections, goal point, heading, alpha, steer
         self.file.write('{' + f"'x': {pos_x}, 'y': {pos_y}, 'intersections': [({sol_x1},{sol_y1}), ({sol_x2},{sol_y2})], 'goal': {goal_point}, 'heading': {heading}, 'alpha': {alpha}, 'steer': {steer}" + '}')
         return steer, throttle
