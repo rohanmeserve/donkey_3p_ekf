@@ -736,19 +736,19 @@ class PurePursuit_Pilot(object):
             alpha = abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
         elif (goal_point[0] - pos_x) < 0  and (goal_point[1] - pos_y) > 0:
             # NW, 90 - 180
-            alpha = 180*(math.pi/180) - abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
+            alpha = math.pi - abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
         elif (goal_point[0] - pos_x) < 0 and (goal_point[1] - pos_y) < 0:
             # SW, 180 -> 270
-            alpha = abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x))) + 180*(math.pi/180)
+            alpha = abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x))) + math.pi
         else:
             # SE, 270 -> 360
-            alpha = 360*(math.pi/180) - abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
+            alpha = (2*math.pi) - abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
         # lock to 0 -> 360 frame
         alpha %= 2*math.pi
 
         # calculate possible turns (clockwise or counterclockwise) to ensure shortest is taken
         norm_turn = alpha - heading
-        adj_turn = (360*(math.pi/180) - abs(norm_turn)) * -sign(norm_turn)
+        adj_turn = ((2*math.pi) - abs(norm_turn)) * -sign(norm_turn)
         if abs(norm_turn) < abs(adj_turn):
             steer = norm_turn
         else:
