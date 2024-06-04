@@ -652,6 +652,7 @@ class PurePursuit_Pilot(object):
         self.L = axle_dist
 
         # value for controlling speed
+        self.auto_throttle = False
         self.max_speed = max_speed
         self.max_throttle = max_throttle
         self.throttle_level = max_throttle
@@ -786,24 +787,25 @@ class PurePursuit_Pilot(object):
 
         # TODO: figure out how to handle rate of speed up and slow down, since currently will be affected by drive loop frequency (maybe multiply by the drive loop frequency?)
         # adjust throttle based on excess angle and max allowed
-        if excess > 5*(math.pi/180):
-            # if more than 5 degrees of excess, reduce throttle by excess/90deg
-            # reaches 0 throttle at more than 90 degrees of excess
-            self.throttle_level -= (excess/(math.pi/2))/self.max_throttle # ex. 10 deg excess equals -.111 throttle assuming max is 1
-        if excess < 5*(math.pi/180) and total_velocity < self.max_speed:
-            # if less than 5 degrees of excess and below speed limit, increase throttle by 5% of max
-            if self.throttle_level <= (self.max_throttle-(.05/self.max_throttle)):
-                self.throttle_level += .05/self.max_throttle
+        if self.auto_throttle:
+            if excess > 5*(math.pi/180):
+                # if more than 5 degrees of excess, reduce throttle by excess/90deg
+                # reaches 0 throttle at more than 90 degrees of excess
+                self.throttle_level -= (excess/(math.pi/2))/self.max_throttle # ex. 10 deg excess equals -.111 throttle assuming max is 1
+            if excess < 5*(math.pi/180) and total_velocity < self.max_speed:
+                # if less than 5 degrees of excess and below speed limit, increase throttle by 1% of max
+                if self.throttle_level <= (self.max_throttle-(.01/self.max_throttle)):
+                    self.throttle_level += .05/self.max_throttle
 
-        throttle = self.throttle_level
+            throttle = self.throttle_level
 
-        # extra code to ensure max throttle is not breached
-        if throttle > self.max_throttle:
-            throttle = self.max_throttle
+            # extra code to ensure max throttle is not breached
+            if throttle > self.max_throttle:
+                throttle = self.max_throttle
 
-        # ensure car does not start reversing
-        if throttle < 0:
-            throttle = 0
+            # ensure car does not start reversing
+            if throttle < 0:
+                throttle = 0
 
         # write to file for later analysis
         # x, y, intersections, goal point, heading, alpha, steer
