@@ -278,13 +278,13 @@ def drive(cfg, use_joystick=False, camera_type='single'):
 
 
     # Enables heading calculation and estimated position based on gps delta
-    from pos_estimator import PositionEstimator
+    from donkeycar.parts.pos_estimator import PositionEstimator
     position_est = PositionEstimator()
     V.add(position_est, inputs=['imu/acl_x', 'imu/acl_y', 'imu/gyr_x', 'pos/x', 'pos/y'], outputs=['est_pos/x', 'est_pos/y', 'heading', 'abs/acl_x', 'abs/acl_y', 'total_velocity'])
 
     # Alternative estimated positions
     if cfg.USE_IMU_EKF:
-        from pos_estimator import GPS_IMU_EKF
+        from donkeycar.parts.pos_estimator import GPS_IMU_EKF
         ekf = GPS_IMU_EKF(cfg.GPS_STD_DEV, cfg.ACCEL_STD_DEV)
         V.add(ekf, inputs=['pos/x', 'pos/y', 'abs/acl_x', 'abs/acl_y'], outputs=['est_pos/x', 'est_pos/y', 'heading'])
 
@@ -300,12 +300,12 @@ def drive(cfg, use_joystick=False, camera_type='single'):
         V.add(pilot, inputs=['cte/error', 'throttles', 'cte/closest_pt'], outputs=['pilot/steering', 'pilot/throttle'], run_condition="run_pilot")
     
     elif cfg.AUTOPILOT_TYPE == 'PurePursuit':
-        from path import PurePursuit_Pilot
+        from donkeycar.parts.path import PurePursuit_Pilot
         pilot = PurePursuit_Pilot(lookahead_distance=5, Kd=1, max_steer=25, axle_dist=1, reverse_steering=False)
         V.add(pilot, inputs=['path', 'pos/x', 'pos/y', 'heading', 'throttles', 'cte/closest_pt', 'total_velocity'], outputs=['pilot/steering', 'pilot/throttle'], run_condition='run_pilot')
 
     elif cfg.AUTOPILOT_TYPE == 'Stanley':
-        from path import StanleyPilot
+        from donkeycar.parts.path import StanleyPilot
         pilot = StanleyPilot(Kd=1, max_steer=25)
         V.add(pilot, inputs=['path', 'heading', 'cte/track_heading', 'cte/error', 'total_velocity'], outputs=['pilot/steering', 'pilot/throttle'], run_condition='run_pilot')
 
@@ -467,7 +467,7 @@ def add_gps(V, cfg):
     if cfg.HAVE_GPS:
         from donkeycar.parts.serial_port import SerialPort, SerialLineReader
         # ensure custom parser is imported, since it also returns hdop
-        from gps import GpsNmeaPositions, GpsLatestPosition, GpsPlayer
+        from donkeycar.parts.gps import GpsNmeaPositions, GpsLatestPosition, GpsPlayer
         from donkeycar.parts.pipe import Pipe
         from donkeycar.parts.text_writer import CsvLogger
 
@@ -478,14 +478,8 @@ def add_gps(V, cfg):
         # - convert nmea lines to positions
         # - retrieve the most recent position
         #
-        gps_over_usb = True
-        if gps_over_usb:
-            serial_port = SerialPort(cfg.GPS_SERIAL, cfg.GPS_SERIAL_BAUDRATE)
-            nmea_reader = SerialLineReader(serial_port)
-        else:
-            # add custom atlas reader
-            from gps_over_udp import ATLAS_GNSS
-            nmea_reader = ATLAS_GNSS()
+        serial_port = SerialPort(cfg.GPS_SERIAL, cfg.GPS_SERIAL_BAUDRATE)
+        nmea_reader = SerialLineReader(serial_port)
         V.add(nmea_reader, outputs=['gps/nmea'], threaded=True)
 
         # part to save nmea sentences for later playback
