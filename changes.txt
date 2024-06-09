@@ -1,0 +1,43 @@
+### Changes to current files ###
+
+gps.py:
+	- adjusted GpsNmeaPositions to include hdop, and new parse_nmea_hdop function
+
+imu.pu:
+	- seperated IMU class into 3 seperate classes - EOL (mpu6050, mpu9250), BNO08x, OAKD
+
+path.py:
+	- added track_heading calculation in CTE's run function
+	- added Pure Pursuit Pilot
+	- added Stanley Pilot (proportional controller for cte and heading error)
+
+complete.py:
+	- add_imu adjusted to support seperate IMU classes
+
+manage.py (path_follow.py)
+	- now adds PositionEstimator, EKF, and option to change pilot type
+
+
+
+### New files ###
+
+pos_estimator.py:
+	- PositionEstimator, kalmanFilter, and GPS_IMU_EKF classes
+
+
+
+### Files that need to be made still ###
+
+cfg_path_follow.py:
+	- need to add all new relevant options (cfg.OPTION according to complete.py and path_follow.py changes)
+
+
+
+### Files not planned to be pushed ###
+
+my_joystick.py:
+	- just had around in case we lost it
+
+myconfig.py:
+	- self-explanatory, what's really important is the path_follow config
+
