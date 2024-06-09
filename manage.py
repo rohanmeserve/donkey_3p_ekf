@@ -276,14 +276,17 @@ def drive(cfg, use_joystick=False, camera_type='single'):
     plot = PathPlot(scale=cfg.PATH_SCALE, offset=cfg.PATH_OFFSET)
     V.add(plot, inputs=['map/image', 'path'], outputs=['map/image'])
 
-    ### DSC190 IMU ESTIMATOR AND EKF ###
-    from PositionEstimator import PositionEstimator
+
+    # Enables heading calculation and estimated position based on gps delta
+    from pos_estimator import PositionEstimator
     position_est = PositionEstimator()
-    V.add(position_est, inputs=['imu/acl_x', 'imu/acl_y', 'imu/gyr_x', 'pos/x', 'pos/y'], outputs=['est_pos/x', 'est_pos/y', 'heading', 'abs/acl_x', 'abs/acl_y', 'total_velocity'], threaded=False)
-    from sensor_fusion import GPS_IMU_EKF
-    ekf = GPS_IMU_EKF()
-    V.add(ekf, inputs=['pos/x', 'pos/y', 'abs/acl_x', 'abs/acl_y'], outputs=['est_pos/x', 'est_pos/y', 'heading'])
-    ### END DSC190 ###
+    V.add(position_est, inputs=['imu/acl_x', 'imu/acl_y', 'imu/gyr_x', 'pos/x', 'pos/y'], outputs=['est_pos/x', 'est_pos/y', 'heading', 'abs/acl_x', 'abs/acl_y', 'total_velocity'])
+
+    # Alternative estimated positions
+    if cfg.USE_IMU_EKF:
+        from pos_estimator import GPS_IMU_EKF
+        ekf = GPS_IMU_EKF(cfg.GPS_STD_DEV, cfg.ACCEL_STD_DEV)
+        V.add(ekf, inputs=['pos/x', 'pos/y', 'abs/acl_x', 'abs/acl_y'], outputs=['est_pos/x', 'est_pos/y', 'heading'])
 
     # This will use path and current position to output cross track error
     cte = CTE(look_ahead=cfg.PATH_LOOK_AHEAD, look_behind=cfg.PATH_LOOK_BEHIND, num_pts=cfg.PATH_SEARCH_LENGTH)
