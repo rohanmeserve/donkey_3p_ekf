@@ -286,7 +286,7 @@ def drive(cfg, use_joystick=False, camera_type='single'):
     if cfg.USE_IMU_EKF:
         from donkeycar.parts.pos_estimator import GPS_IMU_EKF
         ekf = GPS_IMU_EKF(cfg.GPS_STD_DEV, cfg.ACCEL_STD_DEV)
-        V.add(ekf, inputs=['pos/x', 'pos/y', 'abs/acl_x', 'abs/acl_y'], outputs=['est_pos/x', 'est_pos/y', 'heading'])
+        V.add(ekf, inputs=['pos/x', 'pos/y', 'abs/acl_x', 'abs/acl_y', 'gps/hdop'], outputs=['est_pos/x', 'est_pos/y', 'heading'])
 
     # This will use path and current position to output cross track error
     cte = CTE(look_ahead=cfg.PATH_LOOK_AHEAD, look_behind=cfg.PATH_LOOK_BEHIND, num_pts=cfg.PATH_SEARCH_LENGTH)
@@ -301,7 +301,7 @@ def drive(cfg, use_joystick=False, camera_type='single'):
     
     elif cfg.AUTOPILOT_TYPE == 'PurePursuit':
         from donkeycar.parts.path import PurePursuit_Pilot
-        pilot = PurePursuit_Pilot(lookahead_distance=5, Kd=1, max_steer=25, axle_dist=1, reverse_steering=False)
+        pilot = PurePursuit_Pilot(cfg.PID_THROTTLE, lookahead_distance=5, Kd=1, max_steer=25, axle_dist=1, reverse_steering=False, use_constant_throttle=cfg.USE_CONSTANT_THROTTLE, min_throttle=cfg.PID_THROTTLE)
         V.add(pilot, inputs=['path', 'pos/x', 'pos/y', 'heading', 'throttles', 'cte/closest_pt', 'total_velocity'], outputs=['pilot/steering', 'pilot/throttle'], run_condition='run_pilot')
 
     elif cfg.AUTOPILOT_TYPE == 'Stanley':
