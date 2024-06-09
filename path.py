@@ -649,8 +649,7 @@ class PurePursuit_Pilot(object):
             Kd: float,
             max_steer: float,
             axle_dist: float,
-            max_speed: float,
-            max_throttle: float,
+            reverse_steering: bool = False,
             use_constant_throttle: bool = False,
             min_throttle: float = None):
         self.throttle = throttle
@@ -666,11 +665,7 @@ class PurePursuit_Pilot(object):
         self.max_steer = max_steer*(math.pi/180)
         self.L = axle_dist
 
-        # value for controlling speed
-        self.auto_throttle = False
-        self.max_speed = max_speed
-        self.max_throttle = max_throttle
-        self.throttle_level = max_throttle
+        self.reverse_steering = reverse_steering
 
         self.last_pos_x = 0
         self.last_pos_y = 0
@@ -679,9 +674,7 @@ class PurePursuit_Pilot(object):
 
     def run(self, path: list, pos_x, pos_y, heading, throttles: list, closest_pt_idx: int, total_velocity:float) -> tuple:
 
-
-        ### CALCULATE STEERING
-
+        ### CALCULATE STEERING ###
 
         # adjust lookahead distance based on velocity
         ld = self.ld_base + (self.Kd * total_velocity)
@@ -784,6 +777,10 @@ class PurePursuit_Pilot(object):
         elif steer < -1:
             excess = abs(steer_raw - self.max_steer)
             steer = -1
+        
+        # reverse steering if applicable
+        if self.reverse_steering:
+            steer *= -1
 
 
         ### END STEERING CALCULATION
@@ -802,44 +799,44 @@ class PurePursuit_Pilot(object):
         self.file.write('{' + f"'x': {pos_x}, 'y': {pos_y}, 'intersections': [({sol_x1},{sol_y1}), ({sol_x2},{sol_y2})], 'goal': {goal_point}, 'heading': {heading}, 'alpha': {alpha}, 'steer': {steer}" + '}')
         return steer, throttle
 
-    class StanleyPilot():
-        def __init__(self, Kd: float, max_steer: float):
-            
-            self.max_steer = max_steer*(math.pi/180)
-            self.Kd = Kd
-            
-        def run(self, car_heading, track_heading, cte, speed): 
-            # find psi: heading error between car's current and track trajectory segment
-            # car_heading is received from part/input
-            # track_heading needs to be calculated inside of CTE; received from part-input
-            
-            psi = None
-            psi_norm = track_heading - car_heading
-            psi_adj = (360*math.pi/180 - abs(psi_norm)) * -sign(psi_norm)
+class StanleyPilot():
+    def __init__(self, Kd: float, max_steer: float):
+        
+        self.max_steer = max_steer*(math.pi/180)
+        self.Kd = Kd
+        
+    def run(self, car_heading, track_heading, cte, speed): 
+        # find psi: heading error between car's current and track trajectory segment
+        # car_heading is received from part/input
+        # track_heading needs to be calculated inside of CTE; received from part-input
+        
+        psi = None
+        psi_norm = track_heading - car_heading
+        psi_adj = (360*math.pi/180 - abs(psi_norm)) * -sign(psi_norm)
 
-            # compare total turn for normal and adjusted turns; take the shortest route
-            if abs(psi_norm) < abs(psi_adj):
-                psi = psi_norm
-            else:
-                psi = psi_adj
-            
-            # find cte/vel component of steering
-            # cte received from part/input
-            # heading received from part/input
-            
-            steer = psi + math.atan((self.Kd*cte)/(speed + 1e-5))
-            
-            # apply min/max steering angle restriction; track excess (how much want to turn, but can't)
-            excess_angle = 0
-            if steer > self.max_steer:
-                excess_angle = abs(steer - self.max_steer)
-                steer = self.max_steer
-            if steer < -self.max_steer:
-                excess_angle = abs(steer - self.max_steer)
-                steer = -self.max_steer
-            
-            # return steer
-            return steer, excess_angle
+        # compare total turn for normal and adjusted turns; take the shortest route
+        if abs(psi_norm) < abs(psi_adj):
+            psi = psi_norm
+        else:
+            psi = psi_adj
+        
+        # find cte/vel component of steering
+        # cte received from part/input
+        # heading received from part/input
+        
+        steer = psi + math.atan((self.Kd*cte)/(speed + 1e-5))
+        
+        # apply min/max steering angle restriction; track excess (how much want to turn, but can't)
+        excess_angle = 0
+        if steer > self.max_steer:
+            excess_angle = abs(steer - self.max_steer)
+            steer = self.max_steer
+        if steer < -self.max_steer:
+            excess_angle = abs(steer - self.max_steer)
+            steer = -self.max_steer
+        
+        # return steer
+        return steer, excess_angle
     
     # TODO: remove for final version; should be in utils
     def sign(num):  
