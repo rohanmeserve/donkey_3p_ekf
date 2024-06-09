@@ -647,7 +647,7 @@ class PurePursuit_Pilot(object):
             throttle: float,
             lookahead_distance: float,
             Kd: float,
-            max_angle: float,
+            max_steer: float,
             axle_dist: float,
             max_speed: float,
             max_throttle: float,
@@ -663,7 +663,7 @@ class PurePursuit_Pilot(object):
         self.Kd = Kd
 
         # values that need to be measure from car
-        self.max_angle = max_angle*(math.pi/180)
+        self.max_steer = max_steer*(math.pi/180)
         self.L = axle_dist
 
         # value for controlling speed
@@ -774,15 +774,15 @@ class PurePursuit_Pilot(object):
         steer = math.atan(2*self.L*math.sin(steer)/ld)
         steer_raw = steer
         # convert steering value to be on scale from -1 to 1
-        steer /= self.max_angle
+        steer /= self.max_steer
 
-        # if steering is outstide min/max steering angle, limit it
+        # if steering is outstide min/max steering angle, limit it; track excess (how much want to turn, but can't)
         excess = 0
         if steer > 1:
-            excess = abs(steer_raw - self.max_angle)
+            excess = abs(steer_raw - self.max_steer)
             steer = 1
         elif steer < -1:
-            excess = abs(steer_raw - self.max_angle)
+            excess = abs(steer_raw - self.max_steer)
             steer = -1
 
 
@@ -796,31 +796,6 @@ class PurePursuit_Pilot(object):
         else:
             throttle = throttles[closest_pt_idx] * self.variable_speed_multiplier
 
-        
-        ### CODE FOR SPEEDING UP / SLOWING DOWN BASED ON HOW SHARP TURN IS ###
-        ### UNTESTED
-
-        # TODO: figure out how to handle rate of speed up and slow down, since currently will be affected by drive loop frequency (maybe multiply by the drive loop frequency?)
-        # adjust throttle based on excess angle and max allowed
-        if self.auto_throttle:
-            if excess > 5*(math.pi/180):
-                # if more than 5 degrees of excess, reduce throttle by excess/90deg
-                # reaches 0 throttle at more than 90 degrees of excess
-                self.throttle_level -= (excess/(math.pi/2))/self.max_throttle # ex. 10 deg excess equals -.111 throttle assuming max is 1
-            if excess < 5*(math.pi/180) and total_velocity < self.max_speed:
-                # if less than 5 degrees of excess and below speed limit, increase throttle by 1% of max
-                if self.throttle_level <= (self.max_throttle-(.01/self.max_throttle)):
-                    self.throttle_level += .05/self.max_throttle
-
-            throttle = self.throttle_level
-
-            # extra code to ensure max throttle is not breached
-            if throttle > self.max_throttle:
-                throttle = self.max_throttle
-
-            # ensure car does not start reversing
-            if throttle < 0:
-                throttle = 0
 
         # write to file for later analysis
         # x, y, intersections, goal point, heading, alpha, steer
@@ -854,7 +829,7 @@ class PurePursuit_Pilot(object):
             
             steer = psi + math.atan((self.Kd*cte)/(speed + 1e-5))
             
-            # apply min/max steering angle restriction; track excess
+            # apply min/max steering angle restriction; track excess (how much want to turn, but can't)
             excess_angle = 0
             if steer > self.max_steer:
                 excess_angle = abs(steer - self.max_steer)
