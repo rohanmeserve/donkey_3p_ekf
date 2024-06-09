@@ -29,7 +29,7 @@ class GpsNmeaPositions:
                 position = parseGpsPosition(nmea, self.debug)
                 if position:
                     # output (ts,x,y, hdop) - so long is x, lat is y
-                    positions.append((ts, position[0], position[1], parse_nmea_pos_error(nmea)))
+                    positions.append((ts, position[0], position[1], parse_nmea_hdop(nmea)))
         return positions
 
     def update(self):
@@ -278,7 +278,7 @@ def parse_nmea_checksum(nmea_line):
     return int(nmea_line[-2:], 16) # checksum hex digits as int
     
 ### DSC190 ###
-def parse_nmea_pos_error(nmea_line):
+def parse_nmea_hdop(nmea_line):
     """
     Given the complete nmea line, find the horizontal dilution of precision
     """
