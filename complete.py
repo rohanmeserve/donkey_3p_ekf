@@ -910,16 +910,24 @@ def add_odometry(V, cfg, threaded=True):
 # IMU setup
 #
 def add_imu(V, cfg):
-    imu = None
-    if cfg.HAVE_IMU:
-        from imu_oakd import IMU
+	imu = None
+	if cfg.HAVE_IMU:
+		from donkeycar.parts.imu import IMU_EOL, IMU_BNO08x, IMU_OAKD
 
-        imu = IMU(sensor=cfg.IMU_SENSOR, addr=cfg.IMU_ADDRESS,
-                  dlp_setting=cfg.IMU_DLP_CONFIG)
-        V.add(imu, outputs=['imu/acl_x', 'imu/acl_y', 'imu/acl_z',
+		if  cfg.IMU_SENSOR == 'mpu6050' or cfg.IMU_SENSOR == 'mpu9250':
+			imu = IMU_EOL(addr=cfg.IMU_ADDRESS, sensor=cfg.IMU_SENSOR, 
+                  		dlp_setting=cfg.IMU_DLP_CONFIG)
+		elif cfg.IMU_SENSOR == 'oakd':
+			imu = IMU_OAKD(poll_delay=.01)
+
+		elif cfg.IMU_SENSOR == 'bno08x':
+			imu = IMU(connection_type=cfg.IMU_CONNECTION_TYPE, serial_port=cfg.IMU_SERIAL_PORT)
+
+		else:
+			print('did not receive a recognized IMU!')
+		V.add(imu, outputs=['imu/acl_x', 'imu/acl_y', 'imu/acl_z',
                             'imu/gyr_x', 'imu/gyr_y', 'imu/gyr_z'], threaded=True)
-    return imu
-
+	return imu
 
 #
 # Drive train setup
