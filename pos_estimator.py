@@ -235,7 +235,7 @@ class GPS_IMU_EKF:
     and modifying GPS inputs from latitude/longitude to x/y in meters (NMEA parsing and conversion is handled within Donkey).
     '''
 
-    def __init__(self, accelero_std):
+    def __init__(self, gpsStdDev, acceleroStdDev):
         # # setting some constants
         self.start_time = time.time()
         self.last_time = time.time()
@@ -243,9 +243,9 @@ class GPS_IMU_EKF:
         # longitude = x axis, latitude = y axis
 
         # set standard deviations
-        gpsStdDev = 2.0
-        accEastStdDev = accelero_std
-        accNorthStdDev = accelero_std
+        gpsStdDev = gpsStdDev
+        accEastStdDev = acceleroStdDev
+        accNorthStdDev = acceleroStdDev
 
         # create objects of kalman filter; ASSUMING THAT START IS AT 0,0 AND STATIONARY
         self.objEast = kalmanFilter(0, 0, gpsStdDev, accEastStdDev, self.start_time)
