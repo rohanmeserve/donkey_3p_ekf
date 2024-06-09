@@ -68,7 +68,7 @@ class PositionEstimator:
             gyr_x = 0
         if acl_x is None:
             acl_x = 0
-        if acly_y is None:
+        if acl_y is None:
             acl_y = 0
 
         # update orientation
