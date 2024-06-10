@@ -283,7 +283,7 @@ def parse_nmea_hdop(nmea_line):
     Given the complete nmea line, find the horizontal dilution of precision
     """
     # for GGA, HDOP should be the 9th value when splitting by comma
-    return float(nmea_line.split(',')[8])
+    return float(nmea_line[1:-3].split(',')[8])
     
 def calculate_nmea_checksum(nmea_line):
     """

@@ -68,7 +68,7 @@ class PositionEstimator:
             gyr_x = 0
         if acl_x is None:
             acl_x = 0
-        if acly_y is None:
+        if acl_y is None:
             acl_y = 0
 
         # update orientation
@@ -254,6 +254,8 @@ class GPS_IMU_EKF:
         
         self.last_pos_x = 0
         self.last_pos_y = 0
+        self.last_pred_x = 0
+        self.last_pred_y = 0
 
         # create file for analysis purposes
         self.file = open('ekf.csv', 'w')
