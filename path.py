@@ -435,13 +435,13 @@ class CTE(object):
                 track_heading = abs(math.atan((b[1] - a[1]) / (b[0] - a[0])))
             elif (b[0] - a[0]) < 0  and (b[1] - a[1]) > 0:
                 # NW, 90 - 180
-                track_heading = 180*(math.pi/180) - abs(math.atan((b[1] - a[1]) / (b[0] - a[0])))
+                track_heading = math.pi - abs(math.atan((b[1] - a[1]) / (b[0] - a[0])))
             elif (b[0] - a[0]) < 0 and (b[1] - a[1]) < 0:
                 # SW, 180 -> 270
-                track_heading = abs(math.atan((b[1] - a[1]) / (b[0] - a[0]))) + 180*(math.pi/180)
+                track_heading = abs(math.atan((b[1] - a[1]) / (b[0] - a[0]))) + math.pi
             else:
                 # SE, 270 -> 360
-                track_heading = 360*(math.pi/180) - abs(math.atan((b[1] - a[1]) / (b[0] - a[0])))
+                track_heading = (2*math.pi) - abs(math.atan((b[1] - a[1]) / (b[0] - a[0])))
         else:
             logging.info(f"no nearest point to ({x},{y}))")
         return cte, i, track_heading
@@ -470,173 +470,6 @@ class PID_Pilot(object):
         else:
             throttle = throttles[closest_pt_idx] * self.variable_speed_multiplier
         logging.info(f"CTE: {cte} steer: {steer} throttle: {throttle}")
-        return steer, throttle
-
-class PurePursuit_Pilot_Stable(object):
-
-    def __init__(
-            self,
-            throttle: float,
-            lookahead_distance: float,
-            max_angle: float,
-            use_constant_throttle: bool = False,
-            min_throttle: float = None):
-        self.throttle = throttle
-        self.use_constant_throttle = use_constant_throttle
-        self.variable_speed_multiplier = 1.0
-        self.min_throttle = min_throttle if min_throttle is not None else throttle
-
-        self.ld = lookahead_distance
-        self.axel_dist = 1
-
-        self.min_angle = -max_angle*(math.pi/180)
-        self.max_angle = max_angle*(math.pi/180)
-
-        self.last_pos_x = 0
-        self.last_pos_y = 0
-
-        self.file = open('navigator.csv', 'w')
-
-    def run(self, path: list, pos_x, pos_y, heading, throttles: list, closest_pt_idx: int) -> tuple:
-        # If PositionEstimator is not used for heading, instead calculate based on last gps position
-        if heading is None:
-            # calculate heading based on angle between last and current position
-            if (pos_x - self.last_pos_x) > 0 and (pos_y - self.last_pos_y) > 0:
-                # NE, 0 -> 90
-                heading = abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
-            elif (pos_x - self.last_pos_x) < 0  and (pos_y - self.last_pos_y) > 0:
-                # NW, 90 - 180
-                heading = 180*(math.pi/180) - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
-            elif (pos_x - self.last_pos_x) < 0 and (pos_y - self.last_pos_y) < 0:
-                # SW, 180 -> 270
-                heading = abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x))) + 180*(math.pi/180)
-            else:
-                # SE, 270 -> 360
-                heading = 360*(math.pi/180) - abs(math.atan((pos_y - self.last_pos_y) / (pos_x - self.last_pos_x)))
-            # lock to 0 -> 360 frame
-            heading %= 2*math.pi
-            self.last_pos_x = pos_x
-            self.last_pos_y = pos_y
-
-        ### CALCULATE STEERING
-        # find dist of closest point; if within ld, find intersections; else use closest point as goal point
-        #
-
-        goal_dist = dist(pos_x, pos_y, path[closest_pt_idx][0], path[closest_pt_idx][1])
-        #####print(f'goal dist: {goal_dist}')
-        if goal_dist < self.ld:
-
-            # check next point along path; keep moving until furthest point within ld is found
-            i = 0
-            line_found = False
-            # TODO: optimize search for best path segment within lookahead dist
-            while not line_found:
-                # calc distance for next point
-                i += 1
-                if dist(pos_x, pos_y, path[(closest_pt_idx + i) % len(path)][0], path[(closest_pt_idx + i) % len(path)][1]) > self.ld:
-                    # if dist exceeds lookahead distance, go back one point
-                    i -= 1
-                    line_found = True
-                #####print(f'goal dist: {goal_dist}')
-                # loop terminates if dist exceeds ld; keep last valid index
-            
-            # set line segment where goal point solution exists
-            #####print(f'closest_idx = {closest_pt_idx}, i = {i}')
-            a = path[(closest_pt_idx + i) % len(path)]
-            b = path[(closest_pt_idx + i + 1) % len(path)]
-            #####print(f'using line ({a},{b})')
-            # calculate intersection solution
-            dx = (b[0] - pos_x) - (a[0] - pos_x)
-            dy = (b[1] - pos_y) - (a[1] - pos_y)
-            dr = math.sqrt(dx**2 + dy**2) + 1e-5
-            D = (a[0] - pos_x)*(b[1] - pos_y) - (b[0] - pos_x)*(a[1] - pos_y)
-            discrim = (self.ld**2) * (dr**2) - (D**2)
-            if discrim >= 0:
-                # solutions exist
-                #print(f'discrim: {discrim}')
-                # calculate the solutions
-                sol_x1 = (D * dy + sign(dy) * dx * math.sqrt(discrim)) / dr**2
-                sol_x2 = (D * dy - sign(dy) * dx * math.sqrt(discrim)) / dr**2
-                sol_y1 = (- D * dx + abs(dy) * math.sqrt(discrim)) / dr**2
-                sol_y2 = (- D * dx - abs(dy) * math.sqrt(discrim)) / dr**2
-                # adjust offsets
-                sol_x1 += pos_x
-                sol_x2 += pos_x
-                sol_y1 += pos_y
-                sol_y2 += pos_y
-                #####print(f'possible solutions: ({sol_x1}, {sol_y1}) and ({sol_x2}, {sol_y2})')
-
-                # find distance between each solution and next point; use one with smallest dist (furthest along point)
-                dist_1 = dist(sol_x1, sol_y1, path[(closest_pt_idx + i + 1) % len(path)][0], path[(closest_pt_idx + i + 1) % len(path)][1])
-                dist_2 = dist(sol_x2, sol_y2, path[(closest_pt_idx + i + 1) % len(path)][0], path[(closest_pt_idx + i + 1) % len(path)][1])
-
-                # use solution with lower dist as goal point, but only if solution exists within bounds of line
-                if dist_1 < dist_2: #and (sol_x1 >= a[0] and sol_x1 <= b[0]) and (sol_y1 >= a[1] and sol_y1 <= b[1]):
-                    goal_point = [sol_x1, sol_y1]
-                elif dist_2 < dist_1:# and (sol_x2 >= a[0] and sol_x2 <= b[0]) and (sol_y2 >= a[1] and sol_y2 <= b[1]):
-                    goal_point = [sol_x2, sol_y2]
-                else:
-                    goal_point = path[closest_pt_idx]
-            else:
-                # no solution exists; default to closest
-                #####print(f'negative discriminant; default to closest point {path[closest_pt_idx]}')
-                goal_point = path[closest_pt_idx]
-
-        else:
-            # closest point is not within ld circle; use closest as goal point
-            ###print(f'closest out of range; using {path[(closest_pt_idx + 1) % len(path)]} at dist {goal_dist}')
-            goal_point = path[(closest_pt_idx + 1) % len(path)]
-        # plug goal point into formula for steering angle
-
-        # set steering angle
-        # alpha is angle between current position and goal point; steer is how much heading needs to change (generally difference between heading and alpha)
-        alpha = math.acos((goal_point[0] - pos_x) / (math.sqrt((goal_point[0] - pos_x)**2 + (goal_point[1] - pos_y)**2) + 1e-5))
-        # calculate alpha based on angle between last and current position
-        if (goal_point[1] - pos_y) > 0 and (goal_point[0] - pos_x) > 0:
-            # NE, 0 -> 90
-            alpha = abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
-        elif (goal_point[0] - pos_x) < 0  and (goal_point[1] - pos_y) > 0:
-            # NW, 90 - 180
-            alpha = 180*(math.pi/180) - abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
-        elif (goal_point[0] - pos_x) < 0 and (goal_point[1] - pos_y) < 0:
-            # SW, 180 -> 270
-            alpha = abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x))) + 180*(math.pi/180)
-        else:
-            # SE, 270 -> 360
-            alpha = 360*(math.pi/180) - abs(math.atan((goal_point[1] - pos_y) / (goal_point[0] - pos_x)))
-        # lock to 0 -> 360 frame
-        alpha %= 2*math.pi
-
-        # desired - current = change needed
-        norm_turn = alpha - heading
-        adj_turn = (360*(math.pi/180) - abs(norm_turn)) * -sign(norm_turn)
-        # compare total turn for normal and adjusted turns; take the shortest route
-        #print(f'at: {heading}, turn to {alpha}, norm {norm_turn}, adjusted {adj_turn}')
-        if abs(norm_turn) < abs(adj_turn):
-            steer = norm_turn
-        else:
-            steer = adj_turn
-
-        # convert steering value to be on scale from -1 to 1
-        steer /= self.max_angle
-        # if steering is outstide min/max steering angle, limit it
-        if steer > 1:
-            steer = 1
-        elif steer < -1:
-            steer = -1
-
-        ### END STEERING CALCULATION
-        
-
-        if self.use_constant_throttle or throttles is None or closest_pt_idx is None:
-            throttle = self.throttle
-        elif throttles[closest_pt_idx] * self.variable_speed_multiplier < self.min_throttle:
-            throttle = self.min_throttle
-        else:
-            throttle = throttles[closest_pt_idx] * self.variable_speed_multiplier
-
-        # x, y, intersections, goal point, heading, alpha, steer
-        self.file.write('{' + f"'x': {pos_x}, 'y': {pos_y}, 'intersections': [({sol_x1},{sol_y1}), ({sol_x2},{sol_y2})], 'goal': {goal_point}, 'heading': {heading}, 'alpha': {alpha}, 'steer': {steer}" + '}')
         return steer, throttle
 
 
@@ -838,9 +671,3 @@ class StanleyPilot():
         # return steer
         return steer, excess_angle
     
-    # TODO: remove for final version; should be in utils
-    def sign(num):  
-        if num >= 0:
-            return 1
-        else:
-            return -1
