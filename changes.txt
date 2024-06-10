@@ -3,7 +3,7 @@
 gps.py:
 	- adjusted GpsNmeaPositions to include hdop, and new parse_nmea_hdop function
 
-imu.pu:
+imu.py:
 	- seperated IMU class into 3 seperate classes - EOL (mpu6050, mpu9250), BNO08x, OAKD
 
 path.py:
@@ -25,19 +25,20 @@ pos_estimator.py:
 	- PositionEstimator, kalmanFilter, and GPS_IMU_EKF classes
 
 
+### Config Options ###
 
-### Files that need to be made still ###
+cfg.IMU_SENSOR (added 'oakd' and 'bno06x' as options)
+cfg.IMU_CONNECTION_TYPE ('I2C' or 'USB')
+cfg.IMU_SERIAL_PORT
 
-cfg_path_follow.py:
-	- need to add all new relevant options (cfg.OPTION according to complete.py and path_follow.py changes)
+cfg.USE_IMU_EKF
+cfg.GPS_STD_DEV
+cfg.ACCEL_STD_DEV
 
-
-
-### Files not planned to be pushed ###
-
-my_joystick.py:
-	- just had around in case we lost it
-
-myconfig.py:
-	- self-explanatory, what's really important is the path_follow config
-
+cfg.AUTOPILOT_TYPE
+cfg.PILOT_LOOKAHEAD_DISTANCE
+cfg.PILOT_LOOKAHEAD_Kd
+cfg.PILOT_MAX_STEER
+cfg.AXLE_DIST
+cfg.PILOT_REVERSE_STEERING
+cfg.STANLEY_Kd

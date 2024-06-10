@@ -301,12 +301,12 @@ def drive(cfg, use_joystick=False, camera_type='single'):
     
     elif cfg.AUTOPILOT_TYPE == 'PurePursuit':
         from donkeycar.parts.path import PurePursuit_Pilot
-        pilot = PurePursuit_Pilot(cfg.PID_THROTTLE, lookahead_distance=5, Kd=1, max_steer=25, axle_dist=1, reverse_steering=False, use_constant_throttle=cfg.USE_CONSTANT_THROTTLE, min_throttle=cfg.PID_THROTTLE)
+        pilot = PurePursuit_Pilot(cfg.PID_THROTTLE, lookahead_distance=cfg.LOOKAHEAD_DISTANCE, Kd=cfg.LOOKAHEAD_Kd, max_steer=cfg.MAX_STEER, axle_dist=cfg.AXLE_DIST, reverse_steering=cfg.PILOT_REVERSE_STEERING, use_constant_throttle=cfg.USE_CONSTANT_THROTTLE, min_throttle=cfg.PID_THROTTLE)
         V.add(pilot, inputs=['path', 'pos/x', 'pos/y', 'heading', 'throttles', 'cte/closest_pt', 'total_velocity'], outputs=['pilot/steering', 'pilot/throttle'], run_condition='run_pilot')
 
     elif cfg.AUTOPILOT_TYPE == 'Stanley':
         from donkeycar.parts.path import StanleyPilot
-        pilot = StanleyPilot(Kd=1, max_steer=25)
+        pilot = StanleyPilot(Kd=cfg.STANLEY_Kd, max_steer=cfg.MAX_STEER)
         V.add(pilot, inputs=['path', 'heading', 'cte/track_heading', 'cte/error', 'total_velocity'], outputs=['pilot/steering', 'pilot/throttle'], run_condition='run_pilot')
 
 
