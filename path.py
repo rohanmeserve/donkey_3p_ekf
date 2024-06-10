@@ -645,7 +645,7 @@ class StanleyPilot():
         
         psi = None
         psi_norm = track_heading - car_heading
-        psi_adj = (360*math.pi/180 - abs(psi_norm)) * -sign(psi_norm)
+        psi_adj = ((2*math.pi) - abs(psi_norm)) * -sign(psi_norm)
 
         # compare total turn for normal and adjusted turns; take the shortest route
         if abs(psi_norm) < abs(psi_adj):
